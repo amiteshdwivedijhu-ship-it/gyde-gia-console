@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gia Deploy &amp; Escalation Console · GydeOS (synthetic prototype)</title>
+<meta name="description" content="Unofficial synthetic prototype of a GydeOS Gia agent deploy and escalation console. No real data, no login, no accounts. Configure an agency agent, watch an SMS and voice turn, see the zero-tolerance compliance gate, and escalate to a broker with transcript context.">
+<style>
+  :root {
+    --paper: #f5f5f4;
+    --ink: #111111;
+    --ink-soft: #2d2d2d;
+    --gray: #6b7280;
+    --gray-soft: #9ca3af;
+    --red: #ff2727;
+    --red-soft: #ffe9e9;
+    --green: #1a7f37;
+    --green-soft: #e8f3ea;
+    --amber: #b45309;
+    --amber-soft: #fdf1e3;
+    --line: #e4e4e2;
+    --line-strong: #d6d6d4;
+    --card: #ffffff;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(17,17,17,.06), 0 6px 18px rgba(17,17,17,.07);
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: var(--font); font-size: 14px; line-height: 1.45; }
+
+  /* ---------- header ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 22px;
+    border-bottom: 1px solid var(--line);
+    background: #ffffff;
+  }
+  .gyde-mark { display: flex; align-items: center; gap: 8px; }
+  .gyde-logo {
+    width: 22px; height: 22px; border-radius: 7px;
+    background: var(--ink); display: grid; place-items: center; color: #fff;
+    font-weight: 800; font-size: 13px; line-height: 1;
+  }
+  .gyde-name { font-weight: 800; letter-spacing: .01em; }
+  .gyde-name small { color: var(--gray); font-weight: 500; }
+  .crumb { color: var(--gray); font-size: 12px; }
+  .crumb .sep { color: var(--gray-soft); margin: 0 4px; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: var(--gray);
+    background: #fff; border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.warn { color: #8a5a00; background: var(--amber-soft); border-color: #eccfa0; }
+  .chip.warn .dot { background: #bb7a00; }
+
+  /* ---------- walkthrough bar ---------- */
+  .walk {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin: 0 22px 14px; padding: 10px 14px;
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .walk-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--gray); font-weight: 700; }
+  .steps { display: flex; gap: 6px; align-items: center; }
+  .step-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    color: var(--gray-soft); background: #ececea;
+  }
+  .step-dot.past { background: var(--ink); color: #fff; }
+  .step-dot.now { background: var(--red); color: #fff; box-shadow: 0 0 0 3px rgba(255,39,39,.18); }
+  .caption { flex: 1 1 auto; color: var(--ink-soft); font-size: 13px; font-weight: 500; }
+  .caption b { font-weight: 700; }
+  button.primary {
+    font: inherit; font-weight: 700; color: #fff;
+    background: var(--ink); border: none; border-radius: 9px;
+    padding: 8px 16px; cursor: pointer;
+  }
+  button.primary:hover { background: #000; }
+  button.primary:disabled { background: #c9c9c7; color: #fff; cursor: default; }
+  button.ghost {
+    font: inherit; font-weight: 600; color: var(--gray);
+    background: #fff; border: 1px solid var(--line-strong); border-radius: 9px;
+    padding: 7px 12px; cursor: pointer;
+  }
+  button.ghost:hover { color: var(--ink); border-color: var(--ink-soft); }
+  button.danger {
+    font: inherit; font-weight: 700; color: #fff;
+    background: var(--red); border: none; border-radius: 9px;
+    padding: 9px 18px; cursor: pointer;
+  }
+  button.danger:hover { background: #e02222; }
+
+  /* ---------- layout ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 300px minmax(0,1fr) 320px;
+    gap: 16px; align-items: start;
+    margin: 0 22px;
+  }
+  @media (max-width: 1040px) {
+    .grid { grid-template-columns: minmax(0,1fr); }
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px 18px;
+  }
+  .card h3 {
+    margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: .01em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card .sub { margin: 0 0 12px; font-size: 12px; color: var(--gray); }
+  .card .rule { height: 1px; background: var(--line); margin: 12px 0; border: none; }
+  .flash { outline: 3px solid rgba(255,39,39,.4); outline-offset: 2px; animation: pulse 1.4s ease-in-out 3; }
+  @keyframes pulse { 0%,100% { outline-color: rgba(255,39,39,.45); } 50% { outline-color: rgba(255,39,39,.12); } }
+
+  /* ---------- deploy column ---------- */
+  .kv { display: grid; grid-template-columns: 104px minmax(0,1fr); gap: 3px 10px; font-size: 12.5px; }
+  .kv dt { color: var(--gray-soft); font-weight: 500; }
+  .kv dd { margin: 0; color: var(--ink-soft); font-weight: 600; }
+  .channels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chan {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    border: 1px solid var(--ink-soft); background: #fff; color: var(--ink-soft);
+    cursor: pointer; user-select: none;
+  }
+  .chan[data-on="1"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .intent { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #f2f2f1; color: var(--ink-soft); border: 1px solid var(--line); }
+  .intent.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .policy { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+  .deploy-status { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--gray); font-weight: 600; }
+  .deploy-status .live { color: var(--green); font-weight: 700; }
+  .deploy-status .live .pulse-dot { animation: blink 1.2s ease-in-out infinite; }
+  .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* ---------- conversation column ---------- */
+  .conv-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .conv-head .chan-tab {
+    padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    border: 1px solid var(--line-strong); background: #fff; color: var(--gray); cursor: pointer;
+  }
+  .chan-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .turn-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; color: var(--gray-soft);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .turn { margin-top: 12px; padding: 12px 14px; background: #fafaf9; border: 1px solid var(--line); border-radius: 12px; }
+  .turn h4 { margin: 0; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  }
+  .pill.pass { color: var(--green); background: var(--green-soft); }
+  .pill.block { color: #b3261e; background: #fdece9; }
+  .pill.warn2 { color: var(--amber); background: var(--amber-soft); }
+  .pill.neutral { color: var(--gray); background: #f0f0ef; }
+  .pill.glow { color: var(--red); background: var(--red-soft); }
+  .bubbles { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+  .bub { max-width: 88%; padding: 7px 11px; border-radius: 10px; font-size: 13px; line-height: 1.42; }
+  .bub.gia { align-self: flex-start; background: #fff; border: 1px solid var(--line-strong); color: var(--ink-soft); }
+  .bub.client { align-self: flex-end; background: var(--ink); color: #fff; }
+  .bub.sys { align-self: center; background: #f2f2f1; color: var(--gray); font-size: 12px; border: 1px dashed var(--line-strong); display: flex; gap: 6px; align-items: center; }
+  .bub.draft { align-self: flex-start; background: #fff; border: 1.5px dashed #d9a9a9; color: var(--ink-soft); }
+  .bub.draft .who { color: #b3261e; }
+  .bub.draft::after {
+    content: "DRAFT · blocked by gate";
+    display: block; margin-top: 6px;
+    font-size: 10px; font-weight: 700; color: #b3261e;
+  }
+  .bub .who { display: block; font-size: 10.5px; color: var(--gray-soft); font-weight: 700; margin-bottom: 2px; }
+  .bub.client .who { color: #cfcfcc; }
+  .bub .meta { display: block; font-size: 10.5px; color: var(--gray-soft); margin-top: 3px; }
+
+  /* ---------- gate column ---------- */
+  .gate-row { margin: 4px 0; font-size: 12.5px; line-height: 1.45; }
+  .gate-row .row-top { display: flex; align-items: center; gap: 8px; }
+  .gate-row .nm { color: var(--ink-soft); font-weight: 600; }
+  .gate-row .why { color: var(--gray); font-size: 12px; display: block; margin-top: 1px; }
+  .gate-row .st { min-width: 84px; text-align: right; margin-left: auto; }
+  .verdict { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 9px 12px; border-radius: 10px; font-size: 12.5px; font-weight: 700; }
+  .verdict.block { background: #fdece9; color: #b3261e; border: 1px solid #f3c8c0; }
+  .verdict.pass { background: var(--green-soft); color: var(--green); border: 1px solid #c9e2c4; }
+
+  /* ---------- escalate panel ---------- */
+  #escalatePanel { display: none; }
+  #escalatePanel.show { display: block; }
+  #escalatedPanel { display: none; }
+  #escalatedPanel.show { display: block; }
+  .panel { border: 1px solid var(--line-strong); border-radius: 12px; padding: 13px 15px; background: #fcfcfc; }
+  .panel h4 { margin: 0 0 6px; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 7px; }
+  .handoff { margin: 8px 0; font-size: 12.8px; color: var(--ink-soft); line-height: 1.55; }
+  .cites { display: flex; flex-direction: column; gap: 6px; }
+  .cite {
+    display: flex; gap: 8px; align-items: flex-start;
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px;
+    background: #fff; font-size: 12.5px; color: var(--ink-soft); line-height: 1.45;
+  }
+  .cite .cn { flex: 0 0 auto; font-size: 10.5px; font-weight: 800; color: #fff; background: var(--ink); border-radius: 5px; padding: 1px 6px; height: 18px; min-width: 20px; display: grid; place-items: center; }
+  .cite .ct { display: block; font-size: 10.5px; color: var(--gray-soft); font-weight: 700; margin-top: 2px; }
+  .escalate-note { font-size: 12px; color: var(--gray); margin-top: 8px; }
+  .esc-done { display: flex; gap: 8px; font-size: 12.8px; color: var(--ink-soft); line-height: 1.5; }
+  .esc-done b { color: var(--green); }
+
+  /* ---------- health strip ---------- */
+  .health {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin: 0 22px 26px; padding: 9px 14px;
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    font-size: 12px;
+  }
+  .health .h-label { text-transform: uppercase; letter-spacing: .07em; font-size: 10.5px; font-weight: 800; color: var(--gray); }
+  .health .h-item { display: inline-flex; align-items: center; gap: 5px; color: var(--gray); font-weight: 600; }
+  .health .h-item b { color: var(--ink-soft); font-weight: 700; }
+  footer { margin: 0 22px; font-size: 11.5px; color: var(--gray-soft); }
+  footer a { color: var(--gray-soft); }
+
+  .hidden { display: none; }
+  .fade-in { animation: fadein .45s ease-out; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
+  .shake { animation: shake .4s ease-in-out 2; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="gyde-mark">
+    <div class="gyde-logo">G</div>
+    <span class="gyde-name">GydeOS <small>· Gia Agent Ops</small></span>
+  </div>
+  <div class="crumb"><span>Console</span><span class="sep">/</span><span>Deploy &amp; escalation</span></div>
+  <div class="topbar-right">
+    <span class="chip warn"><span class="dot"></span>Synthetic data</span>
+    <span class="chip"><span class="dot"></span>Not signed in</span>
+  </div>
+</header>
+
+<section class="walk" id="walk">
+  <span class="walk-label">90-sec walkthrough</span>
+  <span class="steps" id="steps">
+    <span class="step-dot" data-s="0">1</span>
+    <span class="step-dot" data-s="1">2</span>
+    <span class="step-dot" data-s="2">3</span>
+    <span class="step-dot" data-s="3">4</span>
+    <span class="step-dot" data-s="4">5</span>
+    <span class="step-dot" data-s="5">6</span>
+  </span>
+  <span class="caption" id="caption">Configure: an acquired agency is loaded with a Gia agent on SMS and Voice. Intents cover renewal reminders and after-hours FAQ. This Console is where the agent portfolio Lead PM owns deploy, gate, and escalation.</span>
+  <button class="primary" id="nextBtn">Next step</button>
+  <button class="ghost" id="replayBtn">Replay</button>
+</section>
+
+<main class="grid">
+
+  <!-- ================= LEFT: DEPLOY ================= -->
+  <section class="card" id="colDeploy">
+    <h3>Deploy</h3>
+    <div class="sub">Agency + agent configuration · synthetic acquired agency</div>
+
+    <div class="kv" style="margin-bottom:6px;">
+      <dt>Agency</dt><dd>Marshall &amp; Sons Insurance</dd>
+      <dt>Acquired</dt><dd>June 2026 · Austin, TX</dd>
+      <dt>Agent</dt><dd>Gia · Client Service · v1.4.2</dd>
+    </div>
+
+    <hr class="rule">
+    <div class="sub" style="margin-bottom:6px;">Channels</div>
+    <div class="channels" id="channels">
+      <span class="chan" data-on="1">SMS</span>
+      <span class="chan" data-on="1">Voice</span>
+    </div>
+
+    <hr class="rule">
+    <div class="sub" style="margin-bottom:6px;">Intents</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;" id="intents">
+      <span class="intent on">Renewal reminder</span>
+      <span class="intent on">After-hours FAQ</span>
+      <span class="intent on">Appointment scheduling</span>
+      <span class="intent">Coverage gap deep-dive</span>
+    </div>
+
+    <hr class="rule">
+    <div class="sub" style="margin-bottom:6px;">Hours</div>
+    <div class="kv" style="margin-bottom:6px;">
+      <dt>SMS</dt><dd>24/7 · auto-reply</dd>
+      <dt>Voice</dt><dd>After-hours 5p–8a CT</dd>
+      <dt>Broker</dt><dd>John Escamilla · on call</dd>
+    </div>
+
+    <hr class="rule">
+    <div class="sub" style="margin-bottom:6px;">Escalation policy</div>
+    <p class="policy" id="policy">Zero-tolerance compliance: Gia never quotes plan costs or coverage outside the agency&apos;s approved answer set. Unapproved claims, formulary detail, or out-of-scope questions route to the broker with full context.</p>
+
+    <hr class="rule">
+    <div id="deployArea">
+      <button class="primary" id="deployBtn" style="width:100%;padding:10px 0;">Deploy to production</button>
+    </div>
+    <div id="deployStatus" class="hidden">
+      <div class="deploy-status"><span class="pulse-dot live"></span><span class="live">Live</span> · SMS + Voice · v1.4.2 · Deployed 7:03 PM CT</div>
+    </div>
+  </section>
+
+  <!-- ================= CENTER: CONVERSATION ================= -->
+  <section class="card" id="colConv">
+    <h3>Conversation</h3>
+    <div class="sub">Live production turns · 100% synthetic client · recorded in GydeOS</div>
+
+    <div class="conv-head" id="convHead">
+      <span class="chan-tab active" data-tab="sms">SMS</span>
+      <span class="chan-tab" data-tab="voice">Voice</span>
+      <span class="turn-label" id="turnLabel">Turn 1 · Renewal reminder</span>
+      <span class="pill pass" id="turnPill">Resolved in-agent</span>
+    </div>
+
+    <!-- SMS turn -->
+    <div class="turn" id="turnSms">
+      <h4>SMS thread <span class="pill pass" id="smsGatePill">Compliance: pass</span></h4>
+      <div class="bubbles" id="smsBubbles"></div>
+    </div>
+
+    <!-- Voice turn -->
+    <div class="turn hidden" id="turnVoice">
+      <h4>Voice call · inbound 7:58 PM CT <span class="pill neutral">Caller verified · DOB + phone</span></h4>
+      <div class="bubbles" id="voiceBubbles"></div>
+    </div>
+  </section>
+
+  <!-- ================= RIGHT: GATE + ESCALATE ================= -->
+  <section class="card" id="colGate">
+    <h3>Compliance gate</h3>
+    <div class="sub">Zero-tolerance checks on every reply, before it sends · Transparency with every interaction</div>
+
+    <div class="gate-row">
+      <div class="row-top"><span class="nm">CMS marketing language</span><span class="st"><span class="pill pass" id="g1">Pass</span></span></div>
+      <span class="why">Approved phrasing only; no unapproved plan claims in either turn. AEP dates and renewal facts come from the agency&apos;s approved answer set.</span>
+    </div>
+    <div class="gate-row">
+      <div class="row-top"><span class="nm">Plan cost claims</span><span class="st"><span class="pill pass" id="g2">Pass</span></span></div>
+      <span class="why">No cost figures quoted. Gia&apos;s draft on the voice call used &quot;low cost&quot; with no approved basis. Zero-tolerance rule: withhold the draft, flag, escalate.</span>
+    </div>
+    <div class="gate-row">
+      <div class="row-top"><span class="nm">Scope: formulary detail</span><span class="st"><span class="pill neutral" id="g3">Out of scope</span></span></div>
+      <span class="why">Coverage and copay questions about specific drugs route to the broker for this agency. Not in Gia&apos;s approved answer set; no safe reply exists.</span>
+    </div>
+    <div class="gate-row">
+      <div class="row-top"><span class="nm">Identity &amp; consent</span><span class="st"><span class="pill pass" id="g4">Pass</span></span></div>
+      <span class="why">SMS consent on file for this number; caller verified by phone + DOB. TCPA / call recording consent recorded in GydeOS.</span>
+    </div>
+
+    <div class="verdict pass" id="verdictPass">Gate verdict: PASS on this turn. Draft sent.</div>
+    <div class="verdict block hidden" id="verdictBlock">Gate verdict: BLOCK. Draft withheld. Zero-tolerance: never sent.</div>
+
+    <hr class="rule">
+    <div id="escalatePanel" class="panel">
+      <h4>Escalate to broker</h4>
+      <p class="handoff">Margaret asked whether her plan covers her heart medication and what the copay would be. Formulary detail is outside Gia&apos;s approved scope, and the blocked draft contained an unapproved cost claim. Broker confirms coverage and copay from approved plan materials, then texts back the answer.</p>
+      <div class="cites" id="cites"></div>
+      <div style="margin-top:10px;">
+        <button class="danger" id="escalateBtn" style="width:100%;">Escalate to broker</button>
+      </div>
+      <p class="escalate-note">Seamless Escalations: complex queries are triaged to the human broker with the full transcript attached.</p>
+    </div>
+
+    <div id="escalatedPanel" class="panel">
+      <h4>Escalated <span class="pill pass">Broker notified</span></h4>
+      <p class="esc-done" id="escDoneText"></p>
+    </div>
+  </section>
+</main>
+
+<section class="health">
+  <span class="h-label">Agent health · secondary data only</span>
+  <span class="h-item">Call success <b>94.2%</b></span>
+  <span class="h-item">Eval coverage <b>312 scenarios</b></span>
+  <span class="h-item">Escalation rate <b>6.8%</b></span>
+  <span class="h-item">Zero-tolerance blocks <b>0 missed in 14 days</b></span>
+</section>
+
+<footer>
+  Unofficial synthetic prototype for a product manager role exercise. Not affiliated with Gyde. No accounts, no real client data, no telephony. Vocabulary follows Gyde public materials: Gia, GydeOS, agency, renewal, after-hours, coverage gap, zero-tolerance compliance, seamless escalations.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  var makeBubble = function (who, text, meta, cls) {
+    var d = document.createElement("div");
+    d.className = "bub " + (cls || (who === "client" ? "client" : "gia"));
+    var w = document.createElement("span");
+    w.className = "who";
+    w.textContent = who;
+    d.appendChild(w);
+    var t = document.createElement("span");
+    t.textContent = text;
+    d.appendChild(t);
+    if (meta) {
+      var m = document.createElement("span");
+      m.className = "meta";
+      m.textContent = meta;
+      d.appendChild(m);
+    }
+    return d;
+  };
+
+  function addSysBubble(box, text, meta) {
+    var s = document.createElement("div");
+    s.className = "bub sys";
+    var t = document.createElement("span");
+    t.textContent = text;
+    s.appendChild(t);
+    var m = document.createElement("span");
+    m.className = "meta";
+    m.textContent = meta;
+    s.appendChild(m);
+    box.appendChild(s);
+  }
+
+  var SMS = [
+    ["gia", "Hi Margaret, this is Gia at Marshall & Sons. Your Medicare plan renews Nov 1. Reply RENEW to keep your coverage, or call us 9a-5p CT. Questions after hours? Text back anytime.", "Outbound · 7:05 PM · intent: renewal reminder"],
+    ["client", "Is my plan the same next year? Does it stay in effect while I wait?", "Reply · 7:41 PM CT"],
+    ["gia", "Yes, your current plan stays in effect until you tell us otherwise. Annual Enrollment Period runs Oct 15 through Dec 7 if you want to compare plans. Want a summary sent by text?", "Compliance gate checked this reply · PASS · sent"],
+    ["client", "Yes please.", "Reply · 7:42 PM CT"],
+    ["gia", "Sent. Your AEP summary text is on the way. Anything else I can help with?", "Compliance gate checked · PASS · sent"]
+  ];
+
+  var VOICE = [
+    ["client", "Hi, I got the AEP summary you sent. Does my plan cover my heart medication, and what would the copay be?", "Inbound call · 7:58 PM CT"],
+    ["gia", "Happy to help, Margaret. Let me check the approved formulary for your plan. One moment.", "Gia · 7:58 PM CT"],
+    ["gia", "Most prescriptions like yours are covered at a low cost.", "Gia draft · 7:59 PM CT"],
+    ["sys", "Compliance gate: unapproved cost claim in draft. Reply withheld by zero-tolerance rule. Formulary detail is out of scope for this agency. Routing to broker.", "Gate verdict · 7:59 PM CT"]
+  ];
+
+  var CITES = [
+    ["C1", "Does my plan cover my heart medication, and what would the copay be?", "Voice transcript · Margaret · 7:58 PM CT"],
+    ["C2", "Draft reply blocked: \u201cMost prescriptions like yours are covered at a low cost.\u201d", "Gia draft · withheld by gate · 7:59 PM CT"],
+    ["C3", "Plan G-2204 · member since 2018 · renewal Nov 1 · AEP summary sent 7:42 PM", "Client profile + SMS transcript"]
+  ];
+
+  var smsBox = $("smsBubbles"), voiceBox = $("voiceBubbles");
+  SMS.forEach(function (r) { smsBox.appendChild(makeBubble(r[0], r[1], r[2])); });
+  VOICE.forEach(function (r) {
+    if (r[0] === "sys") {
+      addSysBubble(voiceBox, r[1], r[2]);
+    } else if (r[2] && r[2].indexOf("draft") !== -1) {
+      voiceBox.appendChild(makeBubble(r[0], r[1], r[2], "draft"));
+    } else {
+      voiceBox.appendChild(makeBubble(r[0], r[1], r[2]));
+    }
+  });
+  CITES.forEach(function (c) {
+    var el = document.createElement("div");
+    el.className = "cite";
+    var n = document.createElement("span");
+    n.className = "cn";
+    n.textContent = c[0];
+    var tx1 = document.createElement("span");
+    tx1.textContent = c[1];
+    var tx2 = document.createElement("span");
+    tx2.className = "ct";
+    tx2.textContent = c[2];
+    el.appendChild(n);
+    el.appendChild(tx1);
+    el.appendChild(tx2);
+    $("cites").appendChild(el);
+  });
+
+  /* ---------------- interaction state ---------------- */
+  var state = { step: 0, deployed: false, escalated: false };
+
+  var CAPTIONS = [
+    "An acquired agency is loaded with Gia on SMS and Voice. Intents: renewal reminder, after-hours FAQ. This console is where the agent portfolio Lead PM owns deploy, gate, and escalation.",
+    "One click pushes Gia to production for this agency. Live in seconds. No account, no telephony, synthetic agency.",
+    "A client replies at 7:41 PM after hours. Gia answers from the approved answer set, the compliance gate passes, and the turn resolves in-agent. The path is not always red.",
+    "An after-hours call. The client asks a specific coverage and copay question. Gia drafts a reply, and the zero-tolerance gate blocks it: unapproved cost claim, plus formulary detail out of scope.",
+    "Compare what Gia drafted against approved scope, then hand the client to the broker with cited transcript context and a short handoff summary.",
+    "Broker notified in GydeOS with the full transcript attached. Zero-tolerance means the draft was withheld, never sent."
+  ];
+  var STEP_NAMES = ["Configure", "Deploy", "SMS turn", "Voice turn", "Escalate", "Done"];
+
+  function refreshWalk() {
+    var dots = document.querySelectorAll(".step-dot");
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].className = "step-dot" + (i < state.step ? " past" : (i === state.step ? " now" : ""));
+    }
+    $("caption").innerHTML = "<b>Step " + (state.step + 1) + " \u00b7 " + STEP_NAMES[state.step] + ":</b> " + CAPTIONS[state.step];
+    $("nextBtn").disabled = state.step >= CAPTIONS.length - 1;
+    $("nextBtn").textContent = state.step >= CAPTIONS.length - 1 ? "Done" : "Next step";
+  }
+
+  function flash(el) {
+    if (typeof el === "string") { el = $(el); }
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+    setTimeout(function () { el.classList.remove("flash"); }, 4600);
+  }
+
+  function setGate(mode) {
+    var g = mode === "pass";
+    $("verdictPass").className = "verdict pass" + (g ? "" : " hidden");
+    $("verdictBlock").className = "verdict block" + (g ? " hidden" : "");
+    $("g1").className = "pill pass"; $("g1").textContent = "Pass";
+    $("g2").className = g ? "pill pass" : "pill block"; $("g2").textContent = g ? "Pass" : "Block";
+    $("g3").className = g ? "pill neutral" : "pill warn2"; $("g3").textContent = "Out of scope";
+    $("g4").className = "pill pass"; $("g4").textContent = "Pass";
+    $("verdictBlock").classList.remove("shake");
+    void $("verdictBlock").offsetWidth;
+    if (!g) { $("verdictBlock").classList.add("shake"); }
+    if (mode === "pass") {
+      $("smsGatePill").className = "pill pass";
+      $("smsGatePill").textContent = "Compliance: pass";
+    }
+  }
+
+  function deploy() {
+    if (state.deployed) { return; }
+    state.deployed = true;
+    $("deployArea").className = "hidden";
+    $("deployStatus").className = "fade-in";
+    flash($("colDeploy"));
+  }
+
+  function setPill(cls, label) {
+    $("turnPill").className = "pill " + cls;
+    $("turnPill").textContent = label;
+  }
+
+  function showSms() {
+    $("turnVoice").classList.add("hidden");
+    $("turnSms").classList.remove("hidden");
+    $("turnSms").classList.remove("fade-in");
+    void $("turnSms").offsetWidth;
+    $("turnSms").classList.add("fade-in");
+    var tabs = document.querySelectorAll(".chan-tab");
+    tabs[0].className = "chan-tab active";
+    tabs[1].className = "chan-tab";
+    $("turnLabel").textContent = "Turn 1 \u00b7 Renewal reminder";
+    setPill("pass", "Resolved in-agent");
+    setGate("pass");
+    flash($("turnSms"));
+  }
+
+  function showVoice() {
+    $("turnSms").classList.add("hidden");
+    $("turnVoice").classList.remove("hidden");
+    $("turnVoice").classList.remove("fade-in");
+    void $("turnVoice").offsetWidth;
+    $("turnVoice").classList.add("fade-in");
+    var tabs = document.querySelectorAll(".chan-tab");
+    tabs[0].className = "chan-tab";
+    tabs[1].className = "chan-tab active";
+    $("turnLabel").textContent = "Turn 2 \u00b7 After-hours call";
+    setPill("glow", "Gate blocked draft");
+    setGate("block");
+    flash($("turnVoice"));
+  }
+
+  function showEscalatePanel() {
+    var p = $("escalatePanel");
+    p.classList.remove("fade-in");
+    void p.offsetWidth;
+    p.className = "panel show";
+    p.classList.add("fade-in");
+    flash(p);
+  }
+
+  function escalate() {
+    if (state.escalated) { return; }
+    state.escalated = true;
+    $("escalatePanel").className = "panel";
+    var d = $("escalatedPanel");
+    d.classList.remove("fade-in");
+    void d.offsetWidth;
+    d.className = "panel show";
+    d.classList.add("fade-in");
+    $("escDoneText").innerHTML =
+      "<span>Escalated to <b>John Escamilla</b> at 8:01 PM CT. Broker notified in GydeOS with full transcript, blocked draft, and handoff summary attached. Targeted response under 1 hour. Margaret sees: \u201cHi Margaret, this is John at Marshall &amp; Sons. I have your coverage question and will text you the answer shortly.\u201d</span>";
+    setPill("glow", "Escalated to broker");
+    flash(d);
+  }
+
+  var steps = [
+    function () { },
+    function () { deploy(); },
+    function () { showSms(); },
+    function () { showVoice(); },
+    function () { showEscalatePanel(); },
+    function () { escalate(); }
+  ];
+
+  function goNext() {
+    if (state.step < CAPTIONS.length - 1) {
+      state.step += 1;
+      refreshWalk();
+      steps[state.step]();
+    }
+  }
+
+  function replay() {
+    state = { step: 0, deployed: true, escalated: false };
+    $("deployArea").className = "hidden";
+    $("deployStatus").className = "fade-in";
+    $("turnVoice").classList.add("hidden");
+    $("turnSms").classList.remove("hidden");
+    $("turnSms").classList.remove("fade-in");
+    var tabs = document.querySelectorAll(".chan-tab");
+    tabs[0].className = "chan-tab active";
+    tabs[1].className = "chan-tab";
+    $("turnLabel").textContent = "Turn 1 \u00b7 Renewal reminder";
+    setPill("pass", "Resolved in-agent");
+    setGate("pass");
+    $("escalatePanel").className = "panel";
+    $("escalatedPanel").className = "panel";
+    refreshWalk();
+  }
+
+  $("nextBtn").addEventListener("click", goNext);
+  $("replayBtn").addEventListener("click", replay);
+  $("deployBtn").addEventListener("click", deploy);
+  $("escalateBtn").addEventListener("click", escalate);
+
+  document.querySelectorAll(".chan").forEach(function (c) {
+    c.addEventListener("click", function () {
+      var on = c.getAttribute("data-on") === "1";
+      c.setAttribute("data-on", on ? "0" : "1");
+    });
+  });
+
+  document.querySelectorAll(".chan-tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      var tab = t.getAttribute("data-tab");
+      document.querySelectorAll(".chan-tab").forEach(function (o) { o.className = "chan-tab"; });
+      t.className = "chan-tab active";
+      if (tab === "sms") {
+        $("turnSms").classList.remove("hidden");
+        $("turnVoice").classList.add("hidden");
+      } else {
+        $("turnVoice").classList.remove("hidden");
+        $("turnSms").classList.add("hidden");
+      }
+    });
+  });
+
+  refreshWalk();
+})();
+</script>
+</body>
+</html>
