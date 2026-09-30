@@ -26,6 +26,7 @@
     --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; background: var(--paper); color: var(--ink); }
   body { font-family: var(--font); font-size: 14px; line-height: 1.45; }
 
@@ -74,7 +75,7 @@
   }
   .step-dot.past { background: var(--ink); color: #fff; }
   .step-dot.now { background: var(--red); color: #fff; box-shadow: 0 0 0 3px rgba(255,39,39,.18); }
-  .caption { flex: 1 1 auto; color: var(--ink-soft); font-size: 13px; font-weight: 500; }
+  .caption { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); font-size: 13px; font-weight: 500; }
   .caption b { font-weight: 700; }
   button.primary {
     font: inherit; font-weight: 700; color: #fff;
@@ -95,6 +96,9 @@
     padding: 9px 18px; cursor: pointer;
   }
   button.danger:hover { background: #e02222; }
+  button, .chan, .chan-tab { touch-action: manipulation; }
+  .walk-actions { display: flex; gap: 8px; }
+  .walk-actions button { flex: 1 1 auto; }
 
   /* ---------- layout ---------- */
   .grid {
@@ -103,8 +107,20 @@
     gap: 16px; align-items: start;
     margin: 0 22px;
   }
-  @media (max-width: 1040px) {
-    .grid { grid-template-columns: minmax(0,1fr); }
+  @media (max-width: 1080px) {
+    button.primary, button.danger { min-height: 44px; }
+    button.ghost { min-height: 40px; }
+    .topbar { padding: 10px 14px; }
+    .walk { margin: 0 14px 12px; }
+    .grid { margin: 0 14px; }
+    .health { margin: 0 14px 20px; }
+    footer { margin: 0 14px; }
+  }
+  @media (min-width: 721px) and (max-width: 1080px) {
+    .grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+    .grid > #colDeploy { grid-column: 1; }
+    .grid > #colConv { grid-column: 2; }
+    .grid > #colGate { grid-column: 1 / -1; }
   }
   .card {
     background: var(--card); border: 1px solid var(--line);
@@ -154,7 +170,7 @@
     text-transform: uppercase; letter-spacing: .06em;
   }
   .turn { margin-top: 12px; padding: 12px 14px; background: #fafaf9; border: 1px solid var(--line); border-radius: 12px; }
-  .turn h4 { margin: 0; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .turn h4 { margin: 0; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .pill {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
@@ -223,6 +239,25 @@
   footer { margin: 0 22px; font-size: 11.5px; color: var(--gray-soft); }
   footer a { color: var(--gray-soft); }
 
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: minmax(0,1fr); margin: 0 12px; gap: 14px; }
+    .topbar { flex-wrap: wrap; padding: 10px 14px; }
+    .crumb { display: none; }
+    .walk { margin: 0 12px 12px; padding: 12px; gap: 10px; }
+    .walk-actions { width: 100%; }
+    .caption { width: 100%; }
+    body { font-size: 15px; line-height: 1.5; }
+    .card { padding: 15px 14px; }
+    .bub { font-size: 14px; padding: 9px 13px; }
+    button.primary, button.danger { min-height: 48px; font-size: 15px; }
+    button.ghost { min-height: 44px; }
+    .chan { padding: 12px 16px; font-size: 13px; }
+    .conv-head .chan-tab { padding: 8px 15px; }
+    .intent { padding: 7px 12px; font-size: 12.5px; }
+    .turn h4 { flex-wrap: wrap; }
+    .cite { padding: 9px 12px; }
+  }
+
   .hidden { display: none; }
   .fade-in { animation: fadein .45s ease-out; }
   @keyframes fadein { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
@@ -255,8 +290,10 @@
     <span class="step-dot" data-s="5">6</span>
   </span>
   <span class="caption" id="caption">Configure: an acquired agency is loaded with a Gia agent on SMS and Voice. Intents cover renewal reminders and after-hours FAQ. This Console is where the agent portfolio Lead PM owns deploy, gate, and escalation.</span>
-  <button class="primary" id="nextBtn">Next step</button>
-  <button class="ghost" id="replayBtn">Replay</button>
+  <div class="walk-actions">
+    <button class="primary" id="nextBtn">Next step</button>
+    <button class="ghost" id="replayBtn">Replay</button>
+  </div>
 </section>
 
 <main class="grid">
